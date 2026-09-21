@@ -61,7 +61,7 @@ pip install -r requirements.txt
 ## Run
 
 ```
-python generate_report_3.py <path_to_your_cabrillo_file.log>
+python generate_report.py <path_to_your_cabrillo_file.log>
 ```
 
 Output will be in `salmon_run_2026_report.html`
