@@ -419,7 +419,7 @@ def build_report(header_info, data, mode_chart, band_chart, wa_chart, na_chart, 
     dx_table_html = render_dx_table_html(data['dx_counts'], data['active_bands'])
     
     summary_html = generate_summary_text(data)
-    callsign = header_info.get("CALLSIGN", "KA7W")
+    callsign = header_info.get("CALLSIGN", "???")
     operating_locs = header_info.get("OPERATING_LOCATIONS", "N/A")
 
     html_document = f"""<!DOCTYPE html>
