@@ -4,6 +4,8 @@ A Python script designed to process Cabrillo log files from the **Salmon Run Ama
 
 The generated report features dynamic rate charts, geographic choropleth heatmaps (Washington Counties, US States, and Canadian Provinces), multiplier breakdowns, and automated executive summary analytics.
 
+You can see a sample at https://jeffschoner.github.io/salmon-run-analyzer/ka7w.html
+
 ---
 
 ## Features
