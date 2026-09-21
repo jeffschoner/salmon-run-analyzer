@@ -83,6 +83,7 @@ def freq_to_band(freq_str):
 def parse_cabrillo(file_path):
     qsos = []
     header_info = {}
+    my_locations = set()
     
     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
         for line in f:
@@ -98,11 +99,12 @@ def parse_cabrillo(file_path):
                     time_str = parts[4]
                     my_call = parts[5]
                     my_rst = parts[6]
-                    my_loc = parts[7]
+                    my_loc = parts[7].upper()
                     ur_call = parts[8]
                     ur_rst = parts[9]
                     ur_loc = parts[10].upper()
 
+                    my_locations.add(my_loc)
                     band = freq_to_band(freq)
                     dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H%M")
                     
@@ -125,6 +127,7 @@ def parse_cabrillo(file_path):
                 key, val = line.split(":", 1)
                 header_info[key.strip()] = val.strip()
 
+    header_info['OPERATING_LOCATIONS'] = ", ".join(sorted(my_locations)) if my_locations else "Unknown"
     return header_info, qsos
 
 def process_log_data(qsos):
@@ -417,6 +420,7 @@ def build_report(header_info, data, mode_chart, band_chart, wa_chart, na_chart, 
     
     summary_html = generate_summary_text(data)
     callsign = header_info.get("CALLSIGN", "KA7W")
+    operating_locs = header_info.get("OPERATING_LOCATIONS", "N/A")
 
     html_document = f"""<!DOCTYPE html>
 <html lang="en">
@@ -507,7 +511,7 @@ def build_report(header_info, data, mode_chart, band_chart, wa_chart, na_chart, 
 <body>
     <header>
         <h1>Salmon Run 2026 Contest Report</h1>
-        <p>Station: <strong>{callsign}</strong> | Operating Location: <strong>Lewis County (LEW)</strong></p>
+        <p>Station: <strong>{callsign}</strong> | Operating Location(s): <strong>{operating_locs}</strong></p>
     </header>
 
     <div class="container">
