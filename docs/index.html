@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salmon Run Contest Log Analyzer</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <style>
+    :root {
+      --primary: #1e3c72;
+      --secondary: #2a5298;
+      --bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --text: #333333;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0; padding: 0;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      padding: 2.5rem 1rem;
+      text-align: center;
+    }
+    header h1 { margin: 0 0 10px 0; font-size: 2.2rem; }
+    header p { margin: 0; opacity: 0.9; }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .upload-box {
+      background: var(--card-bg);
+      border: 2px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      margin-bottom: 30px;
+      transition: border-color 0.2s;
+    }
+    .upload-box:hover { border-color: var(--secondary); }
+    .btn {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn:hover { background-color: var(--secondary); }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      text-align: center;
+    }
+    .card h3 { margin: 0; font-size: 0.85rem; color: #666; text-transform: uppercase; }
+    .card .value { font-size: 2rem; font-weight: bold; margin-top: 10px; color: var(--primary); }
+    .section-block {
+      background: var(--card-bg);
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      margin-bottom: 30px;
+    }
+    h2 { border-bottom: 2px solid #eef2f5; padding-bottom: 10px; color: #2c3e50; margin-top: 0; }
+    .table-wrapper {
+      max-height: 450px;
+      overflow-y: auto;
+      border: 1px solid #dee2e6;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .data-table th, .data-table td {
+      padding: 8px 10px;
+      text-align: center;
+      border: 1px solid #dee2e6;
+    }
+    .data-table thead {
+      position: sticky; top: 0; background-color: #f1f3f5; z-index: 2;
+    }
+    .data-table tr.active-row { background-color: #e7f5ff; }
+    .summary-box { line-height: 1.6; font-size: 1rem; color: #444; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Salmon Run Contest Log Analyzer</h1>
+    <p>Upload your Cabrillo (.log / .txt) file to generate, view, and export an HTML report.</p>
+  </header>
+
+  <div class="container">
+    <div class="upload-box">
+      <input type="file" id="fileInput" accept=".log,.txt" style="display:none;" />
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Select Cabrillo File</button>
+      <p id="fileNameDisplay" style="margin-top:10px; color:#666;">No file selected</p>
+    </div>
+
+    <div id="reportContainer" class="hidden">
+      <div style="text-align: right; margin-bottom: 15px;">
+        <button class="btn" id="exportBtn">Download Static HTML Report</button>
+      </div>
+
+      <div class="section-block">
+        <h2>Contest Performance Summary</h2>
+        <div id="summaryText" class="summary-box"></div>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><h3>Total QSOs</h3><div class="value" id="cardTotalQSOs">0</div></div>
+        <div class="card"><h3>QSO Points</h3><div class="value" id="cardQSOPoints">0</div></div>
+        <div class="card"><h3>Multipliers</h3><div class="value" id="cardMults">0</div></div>
+        <div class="card"><h3>Bonus Points</h3><div class="value" id="cardBonus">0</div></div>
+        <div class="card"><h3>Final Score</h3><div class="value" id="cardScore">0</div></div>
+      </div>
+
+      <div class="section-block">
+        <h2>Operating Rate Charts</h2>
+        <div id="time_mode_chart" style="height:400px;"></div>
+        <div id="time_band_chart" style="height:400px; margin-top:30px;"></div>
+      </div>
+
+      <div class="section-block">
+        <h2>Geographic Heatmaps</h2>
+        <div id="wa_map" style="height:450px;"></div>
+        <div id="usa_map" style="height:450px; margin-top:30px;"></div>
+        <div id="canada_map" style="height:450px; margin-top:30px;"></div>
+      </div>
+
+      <div class="section-block">
+        <h2>Washington Counties Breakdown</h2>
+        <div class="table-wrapper" id="waTableWrapper"></div>
+      </div>
+
+      <div class="section-block">
+        <h2>US States Breakdown</h2>
+        <div class="table-wrapper" id="stateTableWrapper"></div>
+      </div>
+
+      <div class="section-block">
+        <h2>Canadian Provinces Breakdown</h2>
+        <div class="table-wrapper" id="provTableWrapper"></div>
+      </div>
+
+      <div class="section-block">
+        <h2>DX Breakdown</h2>
+        <div class="table-wrapper" id="dxTableWrapper"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const WA_COUNTIES_FIPS = {
+      "ADA": ["Adams", "53001"], "ASO": ["Asotin", "53003"], "BEN": ["Benton", "53005"], 
+      "CHE": ["Chelan", "53007"], "CLAL": ["Clallam", "53009"], "CLAR": ["Clark", "53011"], 
+      "COL": ["Columbia", "53013"], "COW": ["Cowlitz", "53015"], "DOU": ["Douglas", "53017"], 
+      "FER": ["Ferry", "53019"], "FRA": ["Franklin", "53021"], "GAR": ["Garfield", "53023"], 
+      "GRAN": ["Grant", "53025"], "GRAY": ["Grays Harbor", "53027"], "ISL": ["Island", "53029"], 
+      "JEFF": ["Jefferson", "53031"], "KING": ["King", "53033"], "KITS": ["Kitsap", "53035"], 
+      "KITT": ["Kittitas", "53037"], "KLI": ["Klickitat", "53039"], "LEW": ["Lewis", "53041"], 
+      "LIN": ["Lincoln", "53043"], "MAS": ["Mason", "53045"], "OKA": ["Okanogan", "53047"], 
+      "PAC": ["Pacific", "53049"], "PEND": ["Pend Oreille", "53051"], "PIE": ["Pierce", "53053"], 
+      "SAN": ["San Juan", "53055"], "SKAG": ["Skagit", "53057"], "SKAM": ["Skamania", "53059"], 
+      "SNO": ["Snohomish", "53061"], "SPO": ["Spokane", "53063"], "STE": ["Stevens", "53065"], 
+      "THU": ["Thurston", "53067"], "WAH": ["Wahkiakum", "53069"], "WAL": ["Walla Walla", "53071"], 
+      "WHA": ["Whatcom", "53073"], "WHI": ["Whitman", "53075"], "YAK": ["Yakima", "53077"]
+    };
+
+    const CANADIAN_PROVINCES = {
+      "AB": "Alberta", "BC": "British Columbia", "MB": "Manitoba", "NB": "New Brunswick",
+      "NL": "Newfoundland and Labrador", "NS": "Nova Scotia", "NT": "Northwest Territories",
+      "NU": "Nunavut", "ON": "Ontario", "PE": "Prince Edward Island", "QC": "Quebec",
+      "SK": "Saskatchewan", "YT": "Yukon"
+    };
+
+    const US_STATES = {
+      "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
+      "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia",
+      "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa",
+      "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
+      "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi",
+      "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire",
+      "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York", "NC": "North Carolina",
+      "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania",
+      "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee",
+      "TX": "Texas", "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington",
+      "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming", "DC": "District of Columbia"
+    };
+
+    let countGeoJSON = null;
+    let canadaGeoJSON = null;
+
+    // Pre-fetch GeoJSON maps asynchronously
+    fetch("https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json")
+      .then(r => r.json()).then(data => countGeoJSON = data).catch(() => {});
+    fetch("https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/canada.geojson")
+      .then(r => r.json()).then(data => canadaGeoJSON = data).catch(() => {});
+
+    function freqToBand(freqStr) {
+      const freq = parseFloat(freqStr);
+      if (freq >= 1800 && freq <= 2000) return "160m";
+      if (freq >= 3500 && freq <= 4000) return "80m";
+      if (freq >= 7000 && freq <= 7300) return "40m";
+      if (freq >= 14000 && freq <= 14350) return "20m";
+      if (freq >= 21000 && freq <= 21450) return "15m";
+      if (freq >= 28000 && freq <= 29700) return "10m";
+      if (freq >= 50000 && freq <= 54000) return "6m";
+      return "Other";
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById('fileNameDisplay').textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        processCabrilloText(evt.target.result);
+      };
+      reader.readAsText(file);
+    });
+
+    function processCabrilloText(text) {
+      const lines = text.split('\n');
+      const qsos = [];
+      const headerInfo = {};
+      const myLocations = new Set();
+
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        if (trimmed.startsWith("QSO:")) {
+          const parts = trimmed.split(/\s+/);
+          if (parts.length >= 11) {
+            const freq = parts[1];
+            const mode = parts[2].toUpperCase() === "CW" ? "CW" : "PH";
+            const dateStr = parts[3];
+            const timeStr = parts[4];
+            const myCall = parts[5];
+            const myLoc = parts[7].toUpperCase();
+            const urCall = parts[8];
+            const urLoc = parts[10].toUpperCase();
+
+            myLocations.add(myLoc);
+            const band = freqToBand(freq);
+            const timeBin = `${dateStr} ${timeStr.substring(0, 2)}:00`;
+
+            let locType = "DX";
+            if (WA_COUNTIES_FIPS[urLoc]) locType = "WA_COUNTY";
+            else if (CANADIAN_PROVINCES[urLoc]) locType = "VE_PROV";
+            else if (US_STATES[urLoc]) locType = "US_STATE";
+
+            qsos.push({ freq, band, mode, timeBin, myCall, myLoc, urCall, urLoc, locType });
+          }
+        } else if (trimmed.includes(":")) {
+          const idx = trimmed.indexOf(":");
+          headerInfo[trimmed.substring(0, idx).trim()] = trimmed.substring(idx + 1).trim();
+        }
+      });
+
+      headerInfo['OPERATING_LOCATIONS'] = Array.from(myLocations).sort().join(", ") || "Unknown";
+      
+      const processed = computeMetrics(qsos);
+      renderUI(headerInfo, processed);
+    }
+
+    function computeMetrics(qsos) {
+      const countyCounts = {}, stateCounts = {}, provCounts = {}, dxCounts = {};
+      const timeBinsMode = {}, timeBinsBand = {};
+      const bandTotals = {}, modeTotals = {};
+      const usedBands = new Set();
+      const multsWorked = new Set();
+      let qsoPoints = 0;
+      const w7dxBonusModes = new Set();
+
+      qsos.forEach(q => {
+        const { band, mode, urLoc, urCall, locType, timeBin } = q;
+        usedBands.add(band);
+        bandTotals[band] = (bandTotals[band] || 0) + 1;
+        modeTotals[mode] = (modeTotals[mode] || 0) + 1;
+
+        const pts = mode === "CW" ? 3 : 2;
+        qsoPoints += pts;
+
+        if (urCall.toUpperCase() === "W7DX") w7dxBonusModes.add(mode);
+
+        const initDict = (dict, loc) => {
+          if (!dict[loc]) dict[loc] = {};
+          if (!dict[loc][band]) dict[loc][band] = { CW: 0, PH: 0 };
+        };
+
+        if (locType === "WA_COUNTY") {
+          initDict(countyCounts, urLoc);
+          countyCounts[urLoc][band][mode]++;
+          multsWorked.add(urLoc);
+        } else if (locType === "US_STATE") {
+          initDict(stateCounts, urLoc);
+          stateCounts[urLoc][band][mode]++;
+          multsWorked.add(urLoc);
+        } else if (locType === "VE_PROV") {
+          initDict(provCounts, urLoc);
+          provCounts[urLoc][band][mode]++;
+          multsWorked.add(urLoc);
+        } else {
+          initDict(dxCounts, urLoc);
+          dxCounts[urLoc][band][mode]++;
+        }
+
+        if (!timeBinsMode[timeBin]) timeBinsMode[timeBin] = { CW: 0, PH: 0 };
+        timeBinsMode[timeBin][mode]++;
+
+        if (!timeBinsBand[timeBin]) timeBinsBand[timeBin] = {};
+        timeBinsBand[timeBin][band] = (timeBinsBand[timeBin][band] || 0) + 1;
+      });
+
+      const bonusPoints = w7dxBonusModes.size * 500;
+      const finalScore = (qsoPoints * multsWorked.size) + bonusPoints;
+      const stdBands = ["160m", "80m", "40m", "20m", "15m", "10m", "6m"];
+      const activeBands = stdBands.filter(b => usedBands.has(b));
+
+      return {
+        countyCounts, stateCounts, provCounts, dxCounts,
+        timeBinsMode, timeBinsBand, bandTotals, modeTotals,
+        totalQSOs: qsos.length, qsoPoints, multipliers: multsWorked.size,
+        bonusPoints, finalScore, activeBands
+      };
+    }
+
+    function renderUI(headerInfo, data) {
+      document.getElementById('reportContainer').classList.remove('hidden');
+
+      document.getElementById('cardTotalQSOs').textContent = data.totalQSOs;
+      document.getElementById('cardQSOPoints').textContent = data.qsoPoints;
+      document.getElementById('cardMults').textContent = data.multipliers;
+      document.getElementById('cardBonus').textContent = data.bonusPoints;
+      document.getElementById('cardScore').textContent = data.finalScore.toLocaleString();
+
+      // Summary text
+      const sortedHours = Object.keys(data.timeBinsMode).sort();
+      let topBand = "N/A", topMode = "N/A", peakHour = "N/A", peakCount = 0;
+      
+      if (sortedHours.length > 0) {
+        sortedHours.forEach(h => {
+          const cnt = data.timeBinsMode[h].CW + data.timeBinsMode[h].PH;
+          if (cnt > peakCount) { peakCount = cnt; peakHour = h; }
+        });
+        topBand = Object.keys(data.bandTotals).reduce((a, b) => data.bandTotals[a] > data.bandTotals[b] ? a : b, "N/A");
+        topMode = Object.keys(data.modeTotals).reduce((a, b) => data.modeTotals[a] > data.modeTotals[b] ? a : b, "N/A");
+      }
+
+      document.getElementById('summaryText').innerHTML = `
+        <p>Operation spanned <strong>${sortedHours.length} active hours</strong> from <strong>${sortedHours[0] || 'N/A'} UTC</strong> through <strong>${sortedHours[sortedHours.length - 1] || 'N/A'} UTC</strong>, logging <strong>${data.totalQSOs} contacts</strong>.</p>
+        <ul>
+          <li><strong>Peak Activity:</strong> Recorded at <strong>${peakHour} UTC</strong> with <strong>${peakCount} QSOs/hr</strong>.</li>
+          <li><strong>Primary Band:</strong> <strong>${topBand}</strong> with <strong>${data.bandTotals[topBand] || 0} contacts</strong>.</li>
+          <li><strong>Primary Mode:</strong> <strong>${topMode}</strong> with <strong>${data.modeTotals[topMode] || 0} contacts</strong>.</li>
+          <li><strong>Multipliers:</strong> Secured <strong>${data.multipliers} unique multipliers</strong>.</li>
+        </ul>
+      `;
+
+      // Plotly Charts
+      const cwCounts = sortedHours.map(t => data.timeBinsMode[t].CW);
+      const phCounts = sortedHours.map(t => data.timeBinsMode[t].PH);
+
+      Plotly.newPlot('time_mode_chart', [
+        { x: sortedHours, y: cwCounts, name: 'CW', type: 'bar', marker: { color: '#2b5c8f' } },
+        { x: sortedHours, y: phCounts, name: 'Phone', type: 'bar', marker: { color: '#d9534f' } }
+      ], { title: 'Operating Rate Over Time (Mode)', barmode: 'stack', template: 'plotly_white' });
+
+      const bandColors = { "160m": "#7cfc00", "80m": "#e550e5", "40m": "#5959ff", "20m": "#f2c40c", "15m": "#cca166", "10m": "#ff69b4", "6m": "#FF0000" };
+      const bandTraces = data.activeBands.map(b => ({
+        x: sortedHours,
+        y: sortedHours.map(t => data.timeBinsBand[t] ? (data.timeBinsBand[t][b] || 0) : 0),
+        name: b, type: 'bar', marker: { color: bandColors[b] || '#7f7f7f' }
+      }));
+      Plotly.newPlot('time_band_chart', bandTraces, { title: 'Operating Rate Over Time (Band)', barmode: 'stack', template: 'plotly_white' });
+
+      // Heatmaps
+      const waFips = [], waNames = [], waVals = [];
+      Object.keys(WA_COUNTIES_FIPS).forEach(code => {
+        const [fullName, fips] = WA_COUNTIES_FIPS[code];
+        let tot = 0;
+        if (data.countyCounts[code]) {
+          Object.values(data.countyCounts[code]).forEach(b => { tot += b.CW + b.PH; });
+        }
+        waFips.push(fips); waNames.push(fullName); waVals.push(tot);
+      });
+      Plotly.newPlot('wa_map', [{
+        type: 'choropleth', geojson: countGeoJSON, locations: waFips, z: waVals, text: waNames,
+        colorscale: 'Reds', marker: { line: { color: 'white', width: 0.5 } }
+      }], { title: 'Contacts by Washington County', geo: { scope: 'usa', fitbounds: 'locations', visible: false }, template: 'plotly_white' });
+
+      const stCodes = Object.keys(US_STATES);
+      const stVals = stCodes.map(st => {
+        let tot = 0;
+        if (data.stateCounts[st]) Object.values(data.stateCounts[st]).forEach(b => { tot += b.CW + b.PH; });
+        return tot;
+      });
+      Plotly.newPlot('usa_map', [{
+        type: 'choropleth', locations: stCodes, z: stVals, locationmode: 'USA-states',
+        colorscale: 'Reds', marker: { line: { color: 'white', width: 0.5 } }
+      }], { title: 'Contacts by US State', geo: { scope: 'usa', projection: { type: 'albers usa' }, showlakes: true, lakecolor: 'rgb(255, 255, 255)' }, template: 'plotly_white' });
+
+      const caNames = Object.values(CANADIAN_PROVINCES);
+      const caVals = Object.keys(CANADIAN_PROVINCES).map(code => {
+        let tot = 0;
+        if (data.provCounts[code]) Object.values(data.provCounts[code]).forEach(b => { tot += b.CW + b.PH; });
+        return tot;
+      });
+      Plotly.newPlot('canada_map', [{
+        type: 'choropleth', geojson: canadaGeoJSON, featureidkey: 'properties.name', locations: caNames, z: caVals,
+        colorscale: 'Reds', marker: { line: { color: 'white', width: 0.5 } }
+      }], {
+        title: 'Contacts by Canadian Province',
+        geo: { scope: 'north america', center: { lat: 56.13, lon: -106.34 }, projection: { scale: 2.2 }, showlakes: true, lakecolor: 'rgb(255, 255, 255)' },
+        template: 'plotly_white'
+      });
+
+      // Data Tables
+      document.getElementById('waTableWrapper').innerHTML = buildTableHTML(data.countyCounts, WA_COUNTIES_FIPS, data.activeBands, true);
+      document.getElementById('stateTableWrapper').innerHTML = buildTableHTML(data.stateCounts, US_STATES, data.activeBands, false);
+      document.getElementById('provTableWrapper').innerHTML = buildTableHTML(data.provCounts, CANADIAN_PROVINCES, data.activeBands, false);
+      document.getElementById('dxTableWrapper').innerHTML = buildDXTableHTML(data.dxCounts, data.activeBands);
+    }
+
+    function buildTableHTML(countsDict, refData, bands, isFips) {
+      let html = '<table class="data-table"><thead><tr><th rowspan="2">Location</th><th rowspan="2">Name</th>';
+      bands.forEach(b => { html += `<th colspan="2">${b}</th>`; });
+      html += '<th colspan="3">Total</th></tr><tr>';
+      bands.forEach(() => { html += '<th>CW</th><th>PH</th>'; });
+      html += '<th>CW</th><th>PH</th><th>All</th></tr></thead><tbody>';
+
+      Object.keys(refData).sort().forEach(code => {
+        const name = isFips ? refData[code][0] : refData[code];
+        let rowCw = 0, rowPh = 0, cells = '';
+        bands.forEach(b => {
+          const cw = (countsDict[code] && countsDict[code][b]) ? countsDict[code][b].CW : 0;
+          const ph = (countsDict[code] && countsDict[code][b]) ? countsDict[code][b].PH : 0;
+          rowCw += cw; rowPh += ph;
+          cells += `<td>${cw || '-'}</td><td>${ph || '-'}</td>`;
+        });
+        const total = rowCw + rowPh;
+        const cls = total > 0 ? 'class="active-row"' : '';
+        html += `<tr ${cls}><td><strong>${code}</strong></td><td>${name}</td>${cells}<td><strong>${rowCw}</strong></td><td><strong>${rowPh}</strong></td><td><strong>${total}</strong></td></tr>`;
+      });
+
+      return html + '</tbody></table>';
+    }
+
+    function buildDXTableHTML(dxCounts, bands) {
+      const keys = Object.keys(dxCounts).sort();
+      if (!keys.length) return "<p style='text-align:center; color:#777;'>No DX contacts logged.</p>";
+
+      let html = '<table class="data-table"><thead><tr><th rowspan="2">Call / Loc</th>';
+      bands.forEach(b => { html += `<th colspan="2">${b}</th>`; });
+      html += '<th colspan="3">Total</th></tr><tr>';
+      bands.forEach(() => { html += '<th>CW</th><th>PH</th>'; });
+      html += '<th>CW</th><th>PH</th><th>All</th></tr></thead><tbody>';
+
+      keys.forEach(code => {
+        let rowCw = 0, rowPh = 0, cells = '';
+        bands.forEach(b => {
+          const cw = dxCounts[code][b] ? dxCounts[code][b].CW : 0;
+          const ph = dxCounts[code][b] ? dxCounts[code][b].PH : 0;
+          rowCw += cw; rowPh += ph;
+          cells += `<td>${cw || '-'}</td><td>${ph || '-'}</td>`;
+        });
+        const total = rowCw + rowPh;
+        html += `<tr class="active-row"><td><strong>${code}</strong></td>${cells}<td><strong>${rowCw}</strong></td><td><strong>${rowPh}</strong></td><td><strong>${total}</strong></td></tr>`;
+      });
+
+      return html + '</tbody></table>';
+    }
+
+    document.getElementById('exportBtn').addEventListener('click', function() {
+      const reportContent = document.getElementById('reportContainer').innerHTML;
+      const fullHTML = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Salmon Run Contest Report</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"><\/script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background: #f8f9fa; }
+    .section-block { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 20px; }
+    .card { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .card .value { font-size: 2rem; font-weight: bold; color: #1e3c72; }
+    .table-wrapper { max-height: 450px; overflow-y: auto; border: 1px solid #dee2e6; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .data-table th, .data-table td { padding: 8px; text-align: center; border: 1px solid #dee2e6; }
+    .data-table tr.active-row { background-color: #e7f5ff; }
+  </style>
+</head>
+<body>
+  <div style="max-width: 1200px; margin: 0 auto;">
+    ${reportContent}
+  </div>
+</body>
+</html>`;
+
+      const blob = new Blob([fullHTML], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'salmon_run_report.html';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  </script>
+</body>
+</html>

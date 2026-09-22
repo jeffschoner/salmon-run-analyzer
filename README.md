@@ -1,10 +1,22 @@
 # Salmon Run Contest Report Generator
 
-A Python script designed to process Cabrillo log files from the **Salmon Run Amateur Radio Contest** and generate an interactive, self-contained HTML report. 
+This repo contains programs designed to process Cabrillo log files from the **Salmon Run Amateur Radio Contest** and generate a self-contained HTML report. 
 
-The generated report features dynamic rate charts, geographic choropleth heatmaps (Washington Counties, US States, and Canadian Provinces), multiplier breakdowns, and automated executive summary analytics.
+The generated report features rate charts, geographic choropleth heatmaps (Washington Counties, US States, and Canadian Provinces), multiplier breakdowns, and automated executive summary analytics.
 
-You can see a sample at https://jeffschoner.github.io/salmon-run-analyzer/ka7w.html
+
+## Local Python script: `generate_report.py`
+
+A Python script which takes a Cabrillo file as input and outputs the report.
+
+You can see a sample from my 2026 Salmon Run participation at https://jeffschoner.github.io/salmon-run-analyzer/ka7w.html
+
+## Embedded HTML/JavaScript: `docs/index.html`
+
+After I used Gemini to help write the Python script, it occurred to me
+that this could just be a single page HTML/JavaScript application where you
+can upload the Cabrillo file and process it in the browser. This file is
+located in docs/index.html. It can be accessed at https://jeffschoner.github.io/salmon-run-analyzer.
 
 ---
 
@@ -25,7 +37,7 @@ You can see a sample at https://jeffschoner.github.io/salmon-run-analyzer/ka7w.h
 
 ---
 
-## Prerequisites
+## Prerequisites for Python script
 
 - **Python 3.8+**
 - An active internet connection (used when running the script to fetch official US County and Canadian Province GeoJSON boundary files).
