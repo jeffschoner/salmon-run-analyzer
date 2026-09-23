@@ -558,7 +558,16 @@
     }
 
     document.getElementById('exportBtn').addEventListener('click', function() {
-      const reportContent = document.getElementById('reportContainer').innerHTML;
+// Create a temporary clone of the report container
+      const containerClone = document.getElementById('reportContainer').cloneNode(true);
+
+      // Remove the export button container/wrapper from the clone
+      const btnWrapper = containerClone.querySelector('div[style*="text-align: right"]');
+      if (btnWrapper) {
+        btnWrapper.remove();
+      }
+
+      const reportContent = containerClone.innerHTML;
       const fullHTML = `<!DOCTYPE html>
 <html>
 <head>
