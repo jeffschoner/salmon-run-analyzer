@@ -415,6 +415,16 @@
         shapes: breakShape
       });
 
+      // Custom colorscale that explicitly renders 0 contacts as light gray
+      const customChoroplethScale = [
+        [0, '#e9ecef'],
+        [0.00001, '#fee5d9'],
+        [0.2, '#fcae91'],
+        [0.4, '#fb6a4a'],
+        [0.6, '#de2d26'],
+        [1.0, '#a50f15']
+      ];
+
       // Heatmaps
       const waFips = [], waNames = [], waVals = [];
       Object.keys(WA_COUNTIES_FIPS).forEach(code => {
@@ -427,7 +437,7 @@
       });
       Plotly.newPlot('wa_map', [{
         type: 'choropleth', geojson: countGeoJSON, locations: waFips, z: waVals, text: waNames,
-        colorscale: 'Reds', marker: { line: { color: 'white', width: 0.5 } }
+        colorscale: customChoroplethScale, marker: { line: { color: 'white', width: 0.5 } }
       }], { title: 'Contacts by Washington County', geo: { scope: 'usa', fitbounds: 'locations', visible: false }, template: 'plotly_white' });
 
       const stCodes = Object.keys(US_STATES);
@@ -438,7 +448,7 @@
       });
       Plotly.newPlot('usa_map', [{
         type: 'choropleth', locations: stCodes, z: stVals, locationmode: 'USA-states',
-        colorscale: 'Reds', marker: { line: { color: 'white', width: 0.5 } }
+        colorscale: customChoroplethScale, marker: { line: { color: 'white', width: 0.5 } }
       }], { title: 'Contacts by US State', geo: { scope: 'usa', projection: { type: 'albers usa' }, showlakes: true, lakecolor: 'rgb(255, 255, 255)' }, template: 'plotly_white' });
 
       const caNames = Object.values(CANADIAN_PROVINCES);
