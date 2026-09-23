@@ -140,8 +140,7 @@
       <div class="section-block">
         <h2>Geographic Heatmaps</h2>
         <div id="wa_map" style="height:450px;"></div>
-        <div id="usa_map" style="height:450px; margin-top:30px;"></div>
-        <div id="canada_map" style="height:450px; margin-top:30px;"></div>
+        <div id="na_map" style="height:550px; margin-top:30px;"></div>
       </div>
 
       <div class="section-block">
@@ -205,11 +204,14 @@
     };
 
     let countGeoJSON = null;
+    let usaGeoJSON = null;
     let canadaGeoJSON = null;
 
     // Pre-fetch GeoJSON maps asynchronously
     fetch("https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json")
       .then(r => r.json()).then(data => countGeoJSON = data).catch(() => {});
+    fetch("https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json")
+      .then(r => r.json()).then(data => usaGeoJSON = data).catch(() => {});
     fetch("https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/canada.geojson")
       .then(r => r.json()).then(data => canadaGeoJSON = data).catch(() => {});
 
@@ -425,7 +427,7 @@
         [1.0, '#a50f15']
       ];
 
-      // Heatmaps
+      // Washington Counties Heatmap
       const waFips = [], waNames = [], waVals = [];
       Object.keys(WA_COUNTIES_FIPS).forEach(code => {
         const [fullName, fips] = WA_COUNTIES_FIPS[code];
@@ -440,31 +442,64 @@
         colorscale: customChoroplethScale, marker: { line: { color: 'white', width: 0.5 } }
       }], { title: 'Contacts by Washington County', geo: { scope: 'usa', fitbounds: 'locations', visible: false }, template: 'plotly_white' });
 
-      const stCodes = Object.keys(US_STATES);
-      const stVals = stCodes.map(st => {
-        let tot = 0;
-        if (data.stateCounts[st]) Object.values(data.stateCounts[st]).forEach(b => { tot += b.CW + b.PH; });
-        return tot;
-      });
-      Plotly.newPlot('usa_map', [{
-        type: 'choropleth', locations: stCodes, z: stVals, locationmode: 'USA-states',
-        colorscale: customChoroplethScale, marker: { line: { color: 'white', width: 0.5 } }
-      }], { title: 'Contacts by US State', geo: { scope: 'usa', projection: { type: 'albers usa' }, showlakes: true, lakecolor: 'rgb(255, 255, 255)' }, template: 'plotly_white' });
+      // Unified North America Choropleth (US States + Canadian Provinces)
+      const naLocations = [];
+      const naValues = [];
+      const naNames = [];
 
-      const caNames = Object.values(CANADIAN_PROVINCES);
-      const caVals = Object.keys(CANADIAN_PROVINCES).map(code => {
+      Object.keys(US_STATES).forEach(st => {
         let tot = 0;
-        if (data.provCounts[code]) Object.values(data.provCounts[code]).forEach(b => { tot += b.CW + b.PH; });
-        return tot;
+        if (data.stateCounts[st]) {
+          Object.values(data.stateCounts[st]).forEach(b => { tot += b.CW + b.PH; });
+        }
+        naLocations.push(US_STATES[st]);
+        naNames.push(US_STATES[st]);
+        naValues.push(tot);
       });
-      Plotly.newPlot('canada_map', [{
-        type: 'choropleth', geojson: canadaGeoJSON, featureidkey: 'properties.name', locations: caNames, z: caVals,
-        colorscale: 'Reds', marker: { line: { color: 'white', width: 0.5 } }
-      }], {
-        title: 'Contacts by Canadian Province',
-        geo: { scope: 'north america', center: { lat: 56.13, lon: -106.34 }, projection: { scale: 2.2 }, showlakes: true, lakecolor: 'rgb(255, 255, 255)' },
-        template: 'plotly_white'
+
+      Object.keys(CANADIAN_PROVINCES).forEach(code => {
+        let tot = 0;
+        if (data.provCounts[code]) {
+          Object.values(data.provCounts[code]).forEach(b => { tot += b.CW + b.PH; });
+        }
+        naLocations.push(CANADIAN_PROVINCES[code]);
+        naNames.push(CANADIAN_PROVINCES[code]);
+        naValues.push(tot);
       });
+
+      const combinedGeoJSON = {
+        type: "FeatureCollection",
+        features: [
+          ...(usaGeoJSON ? usaGeoJSON.features : []),
+          ...(canadaGeoJSON ? canadaGeoJSON.features : [])
+        ]
+      };
+
+    Plotly.newPlot('na_map', [{
+      type: 'choropleth',
+      geojson: combinedGeoJSON,
+      featureidkey: 'properties.name',
+      locations: naLocations,
+      z: naValues,
+      text: naNames,
+      colorscale: customChoroplethScale,
+      marker: { line: { color: 'white', width: 0.5 } }
+    }], {
+      title: 'Contacts by State & Province (North America)',
+      geo: {
+	scope: 'north america',
+	center: { lat: 50, lon: -98 },
+	projection: { type: 'transverse mercator' },
+	fitbounds: 'locations',
+	visible: true,
+	showlakes: true,
+	lakecolor: 'rgb(255, 255, 255)',
+	showland: true,
+	landcolor: '#f8f9fa'
+      },
+      template: 'plotly_white'
+    });
+
 
       // Data Tables
       document.getElementById('waTableWrapper').innerHTML = buildTableHTML(data.countyCounts, WA_COUNTIES_FIPS, data.activeBands, true);
