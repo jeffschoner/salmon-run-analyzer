@@ -385,6 +385,22 @@
         { bounds: ["2026-09-20 07:00", "2026-09-20 16:00"] }
       ];
 
+      // Faint vertical line marking the overnight break point
+      const overnightLine = [{
+	type: 'line',
+	xref: 'x',
+	yref: 'paper',
+	x0: '2026-09-20 06:30',
+	x1: '2026-09-20 06:30',
+	y0: 0,
+	y1: 1,
+	line: {
+	  color: '#a0a0a0',
+	  width: 1.5,
+	  dash: 'dot' // Optional: 'dash', 'dot', or 'solid'
+	}
+      }];
+
       Plotly.newPlot('time_mode_chart', [
         { x: sortedHours, y: cwCounts, name: 'CW', type: 'bar', marker: { color: '#2b5c8f' } },
         { x: sortedHours, y: phCounts, name: 'Phone', type: 'bar', marker: { color: '#d9534f' } }
@@ -395,7 +411,8 @@
         xaxis: {
           type: 'date',
           rangebreaks: axisRangeBreaks
-        }
+        },
+        shapes: overnightLine
       });
 
       const bandColors = { "160m": "#7cfc00", "80m": "#e550e5", "40m": "#5959ff", "20m": "#f2c40c", "15m": "#cca166", "10m": "#ff69b4", "6m": "#FF0000" };
@@ -411,7 +428,8 @@
         xaxis: {
           type: 'date',
           rangebreaks: axisRangeBreaks
-        }
+        },
+        shapes: overnightLine
       });
 
       // Custom colorscale that explicitly renders 0 contacts as light gray
