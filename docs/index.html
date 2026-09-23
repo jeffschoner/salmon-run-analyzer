@@ -374,6 +374,20 @@
         </ul>
       `;
 
+      // Define contest break shape for time charts
+      const breakShape = [{
+        type: 'rect',
+        xref: 'x',
+        yref: 'paper',
+        x0: '2026-09-20 06:30',
+        x1: '2026-09-20 15:30',
+        y0: 0,
+        y1: 1,
+        fillcolor: '#e0e0e0',
+        opacity: 0.5,
+        line: { width: 0 }
+      }];
+
       // Plotly Charts
       const cwCounts = sortedHours.map(t => data.timeBinsMode[t].CW);
       const phCounts = sortedHours.map(t => data.timeBinsMode[t].PH);
@@ -381,7 +395,12 @@
       Plotly.newPlot('time_mode_chart', [
         { x: sortedHours, y: cwCounts, name: 'CW', type: 'bar', marker: { color: '#2b5c8f' } },
         { x: sortedHours, y: phCounts, name: 'Phone', type: 'bar', marker: { color: '#d9534f' } }
-      ], { title: 'Operating Rate Over Time (Mode)', barmode: 'stack', template: 'plotly_white' });
+      ], {
+        title: 'Operating Rate Over Time (Mode)',
+        barmode: 'stack',
+        template: 'plotly_white',
+        shapes: breakShape
+      });
 
       const bandColors = { "160m": "#7cfc00", "80m": "#e550e5", "40m": "#5959ff", "20m": "#f2c40c", "15m": "#cca166", "10m": "#ff69b4", "6m": "#FF0000" };
       const bandTraces = data.activeBands.map(b => ({
@@ -389,7 +408,12 @@
         y: sortedHours.map(t => data.timeBinsBand[t] ? (data.timeBinsBand[t][b] || 0) : 0),
         name: b, type: 'bar', marker: { color: bandColors[b] || '#7f7f7f' }
       }));
-      Plotly.newPlot('time_band_chart', bandTraces, { title: 'Operating Rate Over Time (Band)', barmode: 'stack', template: 'plotly_white' });
+      Plotly.newPlot('time_band_chart', bandTraces, {
+        title: 'Operating Rate Over Time (Band)',
+        barmode: 'stack',
+        template: 'plotly_white',
+        shapes: breakShape
+      });
 
       // Heatmaps
       const waFips = [], waNames = [], waVals = [];
